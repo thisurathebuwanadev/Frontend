@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { colors } from "../../theme/colors";
+import { publishRoute } from "../../services/routeService";
 
 export default function CreateRouteScreen({ navigation }) {
   const [startLocation, setStartLocation] = useState("");
@@ -29,20 +30,29 @@ export default function CreateRouteScreen({ navigation }) {
     }
 
     setLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await publishRoute({
+        startLatitude: 0,
+        startLongitude: 0,
+        endLatitude: 0,
+        endLongitude: 0,
+        startAddress: startLocation.trim(),
+        endAddress: destination.trim(),
+        departureTime: departureTime.trim(),
+        availableSeats: parseInt(seats, 10) || 1,
+      });
       Alert.alert("Route published", "Your commuting route is now live.", [
         {
           text: "OK",
           onPress: () =>
-            navigation.navigate("DriverRouteList", {
-              justPublished: true,
-            }),
+            navigation.navigate("DriverRouteList", { justPublished: true }),
         },
       ]);
-    }, 800);
+    } catch (error) {
+      Alert.alert("Error", error.response?.data?.message || error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

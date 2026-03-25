@@ -1,16 +1,35 @@
 import React, { useEffect, useState } from "react";
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { colors } from "../../theme/colors";
-import { mockDriverRoutes } from "../../data/mockDriverRoutes";
+import { fetchDriverRoutes } from "../../services/routeService";
 
 export default function DriverRouteListScreen({ navigation, route }) {
-  const [routes, setRoutes] = useState(mockDriverRoutes);
+  const [routes, setRoutes] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadRoutes = async () => {
+    try {
+      setLoading(true);
+      const res = await fetchDriverRoutes();
+      const mapped = (res.data || []).map((r) => ({
+        id: r.route_id,
+        startLocation: r.start_address,
+        destination: r.end_address,
+        departureTime: r.departure_time,
+        seatsAvailable: r.available_seats,
+        status: r.route_status,
+      }));
+      setRoutes(mapped);
+    } catch (e) {
+      console.error("Failed to fetch routes", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (route?.params?.justPublished) {
-      // In a real app we would refetch from backend here.
-    }
-  }, [route?.params]);
+    loadRoutes();
+  }, [route?.params?.justPublished]);
 
   const handleViewRequests = () => {
     navigation.navigate("Requests", { screen: "DriverRequests" });
@@ -24,9 +43,12 @@ export default function DriverRouteListScreen({ navigation, route }) {
     <View style={styles.container}>
       <Text style={styles.title}>Your active routes</Text>
 
+      {loading ? (
+        <ActivityIndicator size="large" color={colors.success} style={{ marginTop: 32 }} />
+      ) : (
       <FlatList
         data={routes}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (
           <View style={styles.card}>
@@ -55,6 +77,7 @@ export default function DriverRouteListScreen({ navigation, route }) {
           </View>
         )}
       />
+      )}
     </View>
   );
 }

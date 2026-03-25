@@ -18,7 +18,7 @@ export default function RootNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!isAuthenticated ? (
         <Stack.Screen name="Auth" component={AuthStack} />
-      ) : role === "driver" ? (
+      ) : role === "DRIVER" ? (
         <Stack.Screen name="DriverTabs" component={DriverTabs} />
       ) : (
         <Stack.Screen name="PassengerTabs" component={PassengerTabs} />

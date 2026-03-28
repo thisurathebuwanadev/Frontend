@@ -2,13 +2,26 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../theme/colors";
+import { createRideRequest } from "../../services/rideService";
 
 export default function RideRequestScreen({ route, navigation }) {
   const { driver, criteria } = route.params ?? {};
 
-  const handleSendRequest = () => {
-    // Simulate API call
-    navigation.navigate("RideTracking", { driver, criteria });
+  const handleSendRequest = async () => {
+    try {
+      console.log("Driver:" + driver.routeId)
+      console.log("criteria:" + criteria.pickupLatitude)
+      await createRideRequest({
+        routeId: driver.routeId,
+        pickupLatitude: criteria?.pickupLatitude,
+        pickupLongitude: criteria?.pickupLongitude,
+        pickupAddress: criteria?.start,
+        passengerCount: Number(criteria?.passengers) || 1,
+      });
+      navigation.navigate("RideTracking", { driver, criteria });
+    } catch (error) {
+      console.error("Failed to create ride request:", error);
+    }
   };
 
   if (!driver) {

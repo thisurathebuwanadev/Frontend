@@ -1,5 +1,5 @@
 import api from "./api";
-import { mockUsers } from "../data/mockUsers";
+// import { mockUsers } from "../data/mockUsers";
 
 // TEMPORARY FRONTEND AUTH SERVICE
 // This file simulates authentication until backend integration.

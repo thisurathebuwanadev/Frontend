@@ -21,6 +21,10 @@ export async function acceptRideRequest(requestId) {
   return { id: requestId, status: "accepted" };
 }
 
+export async function createRideRequest({ routeId, pickupLatitude, pickupLongitude, pickupAddress, passengerCount }) {
+  return api.post("/rides/request", { routeId, pickupLatitude, pickupLongitude, pickupAddress, passengerCount }).then((res) => res.data);
+}
+
 export async function rejectRideRequest(requestId) {
   // REAL API CALL (UNCOMMENT WHEN BACKEND IS READY)
   // return api.post(`/driver/ride-requests/${requestId}/reject`).then((res) => res.data);

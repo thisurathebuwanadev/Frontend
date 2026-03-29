@@ -1,19 +1,38 @@
-import React, { useState } from "react";
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { colors } from "../../theme/colors";
-import { mockDriverTrips } from "../../data/mockDriverTrips";
+import api from "../../services/api";
 
 const TABS = ["Upcoming", "Completed", "Cancelled"];
 
 export default function DriverTripsScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState("Upcoming");
+  const [tripsData, setTripsData] = useState({ upcoming: [], completed: [], cancelled: [] });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.get("/rides/active"),
+      api.get("/rides/completed"),
+      api.get("/rides/cancelled"),
+    ])
+      .then(([active, completed, cancelled]) => {
+        setTripsData({
+          upcoming: active.data.data,
+          completed: completed.data.data,
+          cancelled: cancelled.data.data,
+        });
+      })
+      .catch((err) => console.error("Failed to fetch trips:", err))
+      .finally(() => setLoading(false));
+  }, []);
 
   const trips =
     activeTab === "Upcoming"
-      ? mockDriverTrips.upcoming
+      ? tripsData.upcoming
       : activeTab === "Completed"
-      ? mockDriverTrips.completed
-      : mockDriverTrips.cancelled;
+      ? tripsData.completed
+      : tripsData.cancelled;
 
   return (
     <View style={styles.container}>
@@ -45,6 +64,8 @@ export default function DriverTripsScreen({ navigation }) {
           );
         })}
       </View>
+
+      {loading && <ActivityIndicator size="large" color={colors.accent} />}
 
       <FlatList
         data={trips}

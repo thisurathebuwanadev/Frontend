@@ -12,8 +12,6 @@ export default function RootNavigator() {
 
   const role = currentUser?.role;
 
-  console.log("USER", currentUser);
-  console.log("ROLE", role);
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!isAuthenticated ? (

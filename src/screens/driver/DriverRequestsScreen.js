@@ -1,22 +1,42 @@
-import React, { useState } from "react";
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { colors } from "../../theme/colors";
-import { mockRideRequests } from "../../data/mockRideRequests";
+import api from "../../services/api";
 
 export default function DriverRequestsScreen({ navigation }) {
-  const [requests, setRequests] = useState(mockRideRequests);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleAccept = (request) => {
-    navigation.navigate("ActiveTrip", { request });
+  useEffect(() => {
+    api.get("/rides/incoming")
+      .then((res) => setRequests(res.data.data))
+      .catch((err) => console.error("Failed to fetch ride requests:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleAccept = async (request) => {
+    try {
+      await api.post("/rides/accept", { requestId: request.id, action: "accept" });
+      navigation.navigate("ActiveTrip", { request });
+    } catch (err) {
+      console.error("Failed to accept ride:", err);
+    }
   };
 
-  const handleReject = (id) => {
-    setRequests((prev) => prev.filter((r) => r.id !== id));
+  const handleReject = async (id) => {
+    try {
+      await api.post("/rides/accept", { requestId: id, action: "reject", reason: "Not available" });
+      setRequests((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      console.error("Failed to reject ride:", err);
+    }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Incoming requests</Text>
+
+      {loading && <ActivityIndicator size="large" color={colors.accent} />}
 
       <FlatList
         data={requests}
@@ -25,12 +45,12 @@ export default function DriverRequestsScreen({ navigation }) {
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Text style={styles.name}>{item.passengerName}</Text>
-            <Text style={styles.meta}>{item.pickupLocation}</Text>
+            <Text style={styles.meta}>{item.pickupAddress}</Text>
             <Text style={styles.meta}>
               {item.passengerCount} passenger
               {item.passengerCount > 1 ? "s" : ""} • {item.distanceFromDriverKm} km away
             </Text>
-            <Text style={styles.fare}>Est. fare Rs. {item.estimatedFare}</Text>
+            <Text style={styles.fare}>Est. fare Rs. {item.estimatedCost}</Text>
 
             <View style={styles.actionsRow}>
               <TouchableOpacity

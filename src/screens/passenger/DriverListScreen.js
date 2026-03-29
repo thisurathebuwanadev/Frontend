@@ -12,8 +12,8 @@ import { colors } from "../../theme/colors";
 export default function DriverListScreen({ route, navigation }) {
   const { results = [], criteria } = route.params ?? {};
 
-  const handleRequestRide = (driver) => {
-    navigation.navigate("RideRequest", { driver, criteria });
+  const handleRequestRide = (selectedRoute) => {
+    navigation.navigate("RideRequest", { selectedRoute, criteria });
   };
 
   return (
@@ -49,7 +49,7 @@ export default function DriverListScreen({ route, navigation }) {
                     style={{ marginRight: 4 }}
                   />
                   <Text style={styles.metaText}>
-                    {item.trustScore ?? 4.8} • {item.availableSeats ?? 3} seats
+                    {item.trustScore} • {item.availableSeats} seats • Rs.{item.costPerPassenger}
                   </Text>
                 </View>
                 <View style={styles.metaRow}>
@@ -60,8 +60,7 @@ export default function DriverListScreen({ route, navigation }) {
                     style={{ marginRight: 4 }}
                   />
                   <Text style={styles.metaText}>
-                    {item.pickupDistance ?? "0.4 km"} •{" "}
-                    {item.departureTime ?? "08:30 AM"}
+                    {item.pickupDistance} km • {item.departureTime}
                   </Text>
                 </View>
               </View>

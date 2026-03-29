@@ -12,7 +12,7 @@ import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { colors } from "../../theme/colors";
-import { mockDrivers } from "../../data/mockDrivers";
+import { searchRoutes } from "../../services/routeService";
 
 const DEFAULT_REGION = {
   latitude: 6.9271,
@@ -74,11 +74,38 @@ export default function RouteSearchScreen({ navigation }) {
     setTempMarker(null);
   };
 
-  const handleSearch = () => {
-    navigation.navigate("DriverList", {
-      results: mockDrivers,
-      criteria: { start, startCoords, destination, destCoords, timeWindow, passengers },
-    });
+  const handleSearch = async () => {
+    try {
+      const res = await searchRoutes({
+        startLatitude: startCoords?.latitude ?? 0,
+        startLongitude: startCoords?.longitude ?? 0,
+        endLatitude: destCoords?.latitude ?? 0,
+        endLongitude: destCoords?.longitude ?? 0,
+        departureTime: timeWindow,
+        passengerCount: parseInt(passengers, 10) || 1,
+      });
+      const results = (res.data || []).map((r) => ({
+        id: String(r.routeId),
+        driverId: r.driverId,
+        name: r.driverName,
+        vehicle: r.vehicleType,
+        startAddress: r.startAddress,
+        endAddress: r.endAddress,
+        departureTime: r.departureTime,
+        availableSeats: r.availableSeats,
+        costPerPassenger: r.costPerPassenger,
+        trustScore: parseFloat(r.trustScore),
+        compatibilityScore: r.compatibilityScore,
+        compositeScore: r.compositeScore,
+        pickupDistance: r.distanceFromPickup,
+      }));
+      navigation.navigate("DriverList", {
+        results,
+        criteria: { start, destination, timeWindow, passengers, pickupLatitude: startCoords?.latitude, pickupLongitude: startCoords?.longitude },
+      });
+    } catch (e) {
+      console.error("Route search failed", e);
+    }
   };
 
   const mapRegion = startCoords

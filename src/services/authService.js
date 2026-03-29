@@ -10,7 +10,6 @@ export async function loginUser(credentials) {
   // Uncomment this block and remove the mock logic below once the backend is ready.
   //
   const response = await api.post("/auth/login", credentials);
-  console.log("Response:", response.data.data);
   return {
     id: response.data.data.userId,
     name: response.data.data.name,

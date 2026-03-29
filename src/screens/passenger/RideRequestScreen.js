@@ -5,26 +5,24 @@ import { colors } from "../../theme/colors";
 import { createRideRequest } from "../../services/rideService";
 
 export default function RideRequestScreen({ route, navigation }) {
-  const { driver, criteria } = route.params ?? {};
+  const { selectedRoute, criteria } = route.params ?? {};
 
   const handleSendRequest = async () => {
     try {
-      console.log("Driver:" + driver.routeId)
-      console.log("criteria:" + criteria.pickupLatitude)
       await createRideRequest({
-        routeId: driver.routeId,
+        routeId: selectedRoute.id,
         pickupLatitude: criteria?.pickupLatitude,
         pickupLongitude: criteria?.pickupLongitude,
         pickupAddress: criteria?.start,
         passengerCount: Number(criteria?.passengers) || 1,
       });
-      navigation.navigate("RideTracking", { driver, criteria });
+      navigation.navigate("RideTracking", { selectedRoute, criteria });
     } catch (error) {
       console.error("Failed to create ride request:", error);
     }
   };
 
-  if (!driver) {
+  if (!selectedRoute) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>No driver selected</Text>
@@ -40,14 +38,14 @@ export default function RideRequestScreen({ route, navigation }) {
         <View style={styles.row}>
           <View style={styles.avatar}>
             <Text style={styles.avatarInitial}>
-              {driver.name.charAt(0).toUpperCase()}
+              {selectedRoute.name.charAt(0).toUpperCase()}
             </Text>
           </View>
           <View style={styles.info}>
-            <Text style={styles.name}>{driver.name}</Text>
-            <Text style={styles.vehicle}>{driver.vehicle}</Text>
+            <Text style={styles.name}>{selectedRoute.name}</Text>
+            <Text style={styles.vehicle}>{selectedRoute.vehicle}</Text>
             <Text style={styles.meta}>
-              {driver.trustScore ?? 4.8} • {driver.availableSeats ?? 3} seats
+              {selectedRoute.trustScore ?? 4.8} • {selectedRoute.availableSeats ?? 3} seats
               available
             </Text>
           </View>
@@ -74,7 +72,7 @@ export default function RideRequestScreen({ route, navigation }) {
             style={styles.detailIcon}
           />
           <Text style={styles.detailText}>
-            {criteria?.timeWindow || driver.departureTime || "Flexible time"}
+            {criteria?.timeWindow || selectedRoute.departureTime || "Flexible time"}
           </Text>
         </View>
 

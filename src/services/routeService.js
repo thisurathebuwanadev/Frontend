@@ -17,3 +17,8 @@ export async function publishRoute(payload) {
   return res.data;
 }
 
+export async function markDriverLocation({ routeId, lat, lng, datetime, sessionId }) {
+  const res = await api.post("/drivers/mark-location", { routeId, lat, lng, datetime, sessionId });
+  return res.data;
+}
+

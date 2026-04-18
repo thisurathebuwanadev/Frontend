@@ -1,20 +1,79 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
   Switch,
+  Modal,
+  FlatList,
+  ActivityIndicator,
 } from "react-native";
+import * as Location from "expo-location";
+import * as Crypto from "expo-crypto";
 import { colors } from "../../theme/colors";
+import { fetchDriverRoutes, markDriverLocation } from "../../services/routeService";
 
 export default function DriverHomeScreen({ navigation }) {
   const [isOnline, setIsOnline] = React.useState(false);
+  const [routes, setRoutes] = React.useState([]);
+  const [showRouteModal, setShowRouteModal] = React.useState(false);
+  const [loadingRoutes, setLoadingRoutes] = React.useState(false);
+  const intervalRef = useRef(null);
+  const sessionIdRef = useRef(null);
 
   const stats = {
     todaysTrips: 5,
     todaysEarnings: 1450,
     passengersServed: 8,
+  };
+
+  const handleToggleOnline = async (value) => {
+    if (value) {
+      try {
+        setLoadingRoutes(true);
+        setShowRouteModal(true);
+        const res = await fetchDriverRoutes();
+        setRoutes(res.data);
+      } catch (e) {
+        console.error("Failed to fetch routes:", e);
+        setShowRouteModal(false);
+      } finally {
+        setLoadingRoutes(false);
+      }
+    } else {
+      setIsOnline(false);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      sessionIdRef.current = null;
+    }
+  };
+
+  const sendLocation = async (routeId) => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return;
+      const loc = await Location.getCurrentPositionAsync({});
+      await markDriverLocation({
+        routeId,
+        lat: loc.coords.latitude,
+        lng: loc.coords.longitude,
+        datetime: new Date().toLocaleString("sv-SE", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).replace("T", " "),
+        sessionId: sessionIdRef.current,
+      });
+    } catch (e) {
+      console.error("Failed to mark location:", e);
+    }
+  };
+
+  const handleSelectRoute = (route) => {
+    setShowRouteModal(false);
+    setIsOnline(true);
+    sessionIdRef.current = Crypto.randomUUID();
+    sendLocation(route.route_id);
+    intervalRef.current = setInterval(() => sendLocation(route.route_id), 5 * 60 * 1000);
   };
 
   const handleCreateRoute = () => {
@@ -50,7 +109,7 @@ export default function DriverHomeScreen({ navigation }) {
           <Text style={styles.cardTitle}>Driver status</Text>
           <Switch
             value={isOnline}
-            onValueChange={setIsOnline}
+            onValueChange={handleToggleOnline}
             trackColor={{ false: "#4b5563", true: colors.success }}
             thumbColor={colors.white}
           />
@@ -59,6 +118,42 @@ export default function DriverHomeScreen({ navigation }) {
           Go online to start receiving ride requests along your routes.
         </Text>
       </View>
+
+      <Modal visible={showRouteModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select a route</Text>
+            {loadingRoutes ? (
+              <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
+            ) : (
+              <FlatList
+                data={routes}
+                keyExtractor={(item) => String(item.route_id)}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.routeItem}
+                    onPress={() => handleSelectRoute(item)}
+                  >
+                    <Text style={styles.routeText}>
+                      {item.start_address} → {item.end_address}
+                    </Text>
+                    <Text style={styles.routeTime}>Departs: {item.departure_time}</Text>
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={
+                  <Text style={styles.emptyText}>No routes found</Text>
+                }
+              />
+            )}
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowRouteModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
@@ -227,6 +322,54 @@ const styles = StyleSheet.create({
   },
   fullWidthButton: {
     width: "100%",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: "60%",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.textPrimary,
+    marginBottom: 16,
+  },
+  routeItem: {
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.inputBorder,
+  },
+  routeText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  routeTime: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  emptyText: {
+    textAlign: "center",
+    color: colors.textSecondary,
+    marginVertical: 20,
+  },
+  cancelButton: {
+    marginTop: 12,
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  cancelButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.accent,
   },
 });
 

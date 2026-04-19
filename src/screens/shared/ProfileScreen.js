@@ -74,9 +74,9 @@ export default function ProfileScreen() {
           <View style={styles.trustContainer}>
             <Text style={styles.trustLabel}>Trust Score</Text>
             <View style={styles.trustBarBg}>
-              <View style={[styles.trustBarFill, { width: `${trustScore}%` }]} />
+              <View style={[styles.trustBarFill, { width: `${trustScore*100/5}%` }]} />
             </View>
-            <Text style={styles.trustValue}>{trustScore.toFixed(0)}%</Text>
+            <Text style={styles.trustValue}>{trustScore.toFixed(0)}/5</Text>
           </View>
         </View>
 

@@ -4,12 +4,8 @@ import { mockDrivers } from "../data/mockDrivers";
 // User / profile related APIs.
 
 export async function fetchCurrentUserProfile() {
-  // REAL API CALL (UNCOMMENT WHEN BACKEND IS READY)
-  // return api.get("/me").then((res) => res.data);
-
-  // TEMPORARY PROFILE
-  // For now, the profile is provided by the auth context, so this is a stub.
-  return null;
+  const res = await api.get("/users/profile");
+  return res.data.data;
 }
 
 export async function fetchNearbyDrivers() {

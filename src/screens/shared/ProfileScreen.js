@@ -1,129 +1,107 @@
-import React, { useEffect, useState } from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import React, { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../theme/colors";
 import { useAuth } from "../../hooks/useAuth";
+import { fetchCurrentUserProfile } from "../../services/userService";
 import Avatar from "../../components/Avatar";
+
+function MenuButton({ icon, label, onPress }) {
+  return (
+    <TouchableOpacity style={styles.menuButton} onPress={onPress}>
+      <Ionicons name={icon} size={20} color={colors.textPrimary} />
+      <Text style={styles.menuButtonText}>{label}</Text>
+      <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+    </TouchableOpacity>
+  );
+}
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
   const { currentUser, logout } = useAuth();
-  const [role, setRole] = useState(currentUser?.role ?? "passenger");
-  const [displayName, setDisplayName] = useState(currentUser?.name ?? "");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [vehicleType, setVehicleType] = useState("");
-  const [vehicleModel, setVehicleModel] = useState("");
-  const [seatsAvailable, setSeatsAvailable] = useState("");
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (currentUser?.role) {
-      setRole(currentUser.role);
-    }
-  }, [currentUser]);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setLoading(true);
+      fetchCurrentUserProfile()
+        .then((data) => active && setProfile(data))
+        .catch(() => {})
+        .finally(() => active && setLoading(false));
+      return () => { active = false; };
+    }, [])
+  );
 
-  const handleSave = () => {
-    // TEMPORARY PROFILE SAVE
-    // This is a no-op for now. When backend/profile storage is ready,
-    // replace this with a call to a user/profile service.
-  };
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
-  const handleLogout = async () => {
-    await logout();
-  };
+  const displayName = profile
+    ? `${profile.firstName} ${profile.lastName}`
+    : currentUser?.name || "RouteMate user";
+  const role = (profile?.userType === "both" ? "Driver & Passenger" : profile?.userType) || (currentUser?.role === "DRIVER" ? "Driver" : "Passenger");
+  const trustScore = parseFloat(profile?.trustScore ?? 0);
+  const isVerified = !!profile?.isVerified;
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Avatar name={displayName || currentUser?.email} size={64} />
-          <View style={styles.headerText}>
-            <Text style={styles.fullName}>
-              {displayName || currentUser?.name || "RouteMate user"}
-            </Text>
-            <Text style={styles.roleText}>
-              {role === "driver" ? "Driver" : "Passenger"}
-            </Text>
+          <Avatar name={displayName} size={72} uri={profile?.profileImageUrl} />
+          <Text style={styles.fullName}>{displayName}</Text>
+          <Text style={styles.roleText}>{role}</Text>
+
+          <View style={styles.badgeRow}>
+            <View style={[styles.badge, { backgroundColor: isVerified ? "#DCFCE7" : "#FEF3C7" }]}>
+              <Ionicons
+                name={isVerified ? "checkmark-circle" : "alert-circle"}
+                size={16}
+                color={isVerified ? "#16A34A" : "#D97706"}
+              />
+              <Text style={[styles.badgeText, { color: isVerified ? "#16A34A" : "#D97706" }]}>
+                {isVerified ? "Verified" : "Not Verified"}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.trustContainer}>
+            <Text style={styles.trustLabel}>Trust Score</Text>
+            <View style={styles.trustBarBg}>
+              <View style={[styles.trustBarFill, { width: `${trustScore}%` }]} />
+            </View>
+            <Text style={styles.trustValue}>{trustScore.toFixed(0)}%</Text>
           </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>User information</Text>
-
-          <Text style={styles.label}>Full name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. Amaya Senanayake"
-            placeholderTextColor={colors.placeholderText}
-            value={displayName}
-            onChangeText={setDisplayName}
-          />
-
-          <Text style={styles.label}>Email</Text>
-          <Text style={styles.readOnlyValue}>
-            {currentUser?.email ?? "Not signed in"}
-          </Text>
-
-          <Text style={styles.label}>Phone number</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="+94 71 234 5678"
-            placeholderTextColor={colors.placeholderText}
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-            keyboardType="phone-pad"
-          />
+          <Text style={styles.sectionTitle}>Profile details</Text>
+          <DetailRow label="Full name" value={displayName} />
+          <DetailRow label="Email" value={profile?.email ?? currentUser?.email ?? "Not signed in"} />
+          <DetailRow label="Phone" value={profile?.phoneNumber ?? "Not set"} last />
         </View>
 
-        {role === "driver" && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Driver information</Text>
+        <View style={styles.card}>
+          <MenuButton
+            icon="create-outline"
+            label="Edit Profile"
+            onPress={() => navigation.navigate("EditProfile", { profile })}
+          />
+          {(currentUser?.role === "DRIVER" || profile?.userType === "both") && (
+            <>
+              <MenuButton icon="car-outline" label="Manage Vehicles" onPress={() => navigation.navigate("ManageVehicles")} />
+              <MenuButton icon="document-text-outline" label="Manage Documents" onPress={() => navigation.navigate("ManageDocuments")} />
+            </>
+          )}
+        </View>
 
-            <Text style={styles.label}>Vehicle type</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Car, Van"
-              placeholderTextColor={colors.placeholderText}
-              value={vehicleType}
-              onChangeText={setVehicleType}
-            />
-
-            <Text style={styles.label}>Vehicle model</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Toyota Prius 2018"
-              placeholderTextColor={colors.placeholderText}
-              value={vehicleModel}
-              onChangeText={setVehicleModel}
-            />
-
-            <Text style={styles.label}>Seats available</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. 3"
-              placeholderTextColor={colors.placeholderText}
-              value={seatsAvailable}
-              onChangeText={setSeatsAvailable}
-              keyboardType="number-pad"
-            />
-          </View>
-        )}
-
-        <TouchableOpacity style={styles.primaryButton} onPress={handleSave}>
-          <Text style={styles.primaryButtonText}>Save</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -131,113 +109,48 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 24,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  headerText: {
-    marginLeft: 16,
-  },
-  fullName: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.textPrimary,
-  },
-  roleText: {
-    marginTop: 4,
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 6,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.textPrimary,
-    marginBottom: 16,
-  },
-  sectionTitleSpaced: {
-    marginTop: 24,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: colors.textSecondary,
-    marginBottom: 6,
-  },
-  readOnlyValue: {
-    fontSize: 16,
-    color: colors.textPrimary,
-    marginBottom: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-  },
-  input: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    color: colors.textPrimary,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    marginBottom: 16,
-    fontSize: 16,
-  },
-  primaryButton: {
-    backgroundColor: colors.success,
-    paddingVertical: 14,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.success,
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
-  primaryButtonText: {
-    color: colors.successTextOnDark,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  logoutButton: {
-    marginTop: 16,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoutButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-});
+function DetailRow({ label, value, last }) {
+  return (
+    <View style={[styles.detailRow, !last && styles.detailRowBorder]}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
+    </View>
+  );
+}
 
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  scrollContent: { padding: 24, paddingBottom: 40 },
+  header: { alignItems: "center", marginBottom: 24 },
+  fullName: { fontSize: 20, fontWeight: "700", color: colors.textPrimary, marginTop: 12 },
+  roleText: { fontSize: 13, color: colors.textSecondary, marginTop: 4 },
+  badgeRow: { flexDirection: "row", marginTop: 10 },
+  badge: {
+    flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
+  },
+  badgeText: { fontSize: 12, fontWeight: "600", marginLeft: 4 },
+  trustContainer: { alignItems: "center", marginTop: 14, width: "60%" },
+  trustLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 4 },
+  trustBarBg: { width: "100%", height: 6, backgroundColor: "#E5E7EB", borderRadius: 3, overflow: "hidden" },
+  trustBarFill: { height: 6, backgroundColor: colors.primary, borderRadius: 3 },
+  trustValue: { fontSize: 12, fontWeight: "600", color: colors.textPrimary, marginTop: 4 },
+  card: {
+    backgroundColor: colors.white, borderRadius: 20, padding: 20, marginBottom: 16,
+    shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 10 }, elevation: 6,
+  },
+  sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.textPrimary, marginBottom: 12 },
+  detailRow: { paddingVertical: 10 },
+  detailRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.background },
+  detailLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 2 },
+  detailValue: { fontSize: 15, color: colors.textPrimary, fontWeight: "500" },
+  menuButton: {
+    flexDirection: "row", alignItems: "center", paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: colors.background,
+  },
+  menuButtonText: { flex: 1, marginLeft: 12, fontSize: 15, color: colors.textPrimary, fontWeight: "500" },
+  logoutButton: {
+    backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 999,
+    alignItems: "center", marginTop: 8,
+  },
+  logoutButtonText: { color: colors.white, fontSize: 16, fontWeight: "700" },
+});

@@ -12,12 +12,16 @@ import ActiveTripScreen from "../screens/driver/ActiveTripScreen";
 import DriverRouteListScreen from "../screens/driver/DriverRouteListScreen";
 import DriverEarningsScreen from "../screens/driver/DriverEarningsScreen";
 import ProfileScreen from "../screens/shared/ProfileScreen";
+import EditProfileScreen from "../screens/shared/EditProfileScreen";
+import ManageVehiclesScreen from "../screens/driver/ManageVehiclesScreen";
+import ManageDocumentsScreen from "../screens/driver/ManageDocumentsScreen";
 import { colors } from "../theme/colors";
 
 const Tab = createBottomTabNavigator();
 const RoutesStack = createNativeStackNavigator();
 const RequestsStack = createNativeStackNavigator();
 const TripsStack = createNativeStackNavigator();
+const ProfileStack = createNativeStackNavigator();
 
 function PlaceholderScreen({ label }) {
   return (
@@ -60,6 +64,17 @@ function TripsStackNavigator() {
         component={DriverEarningsScreen}
       />
     </TripsStack.Navigator>
+  );
+}
+
+function ProfileStackNavigator() {
+  return (
+    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} />
+      <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} />
+      <ProfileStack.Screen name="ManageVehicles" component={ManageVehiclesScreen} />
+      <ProfileStack.Screen name="ManageDocuments" component={ManageDocumentsScreen} />
+    </ProfileStack.Navigator>
   );
 }
 
@@ -116,7 +131,7 @@ export default function DriverTabs() {
         component={TripsStackNavigator}
         options={{ title: "Trips" }}
       />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Profile" component={ProfileStackNavigator} />
     </Tab.Navigator>
   );
 }

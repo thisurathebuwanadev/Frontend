@@ -12,10 +12,12 @@ import RideTrackingScreen from "../screens/passenger/RideTrackingScreen";
 import PassengerTripsScreen from "../screens/passenger/PassengerTripsScreen";
 import PassengerNotificationsScreen from "../screens/passenger/PassengerNotificationsScreen";
 import ProfileScreen from "../screens/shared/ProfileScreen";
+import EditProfileScreen from "../screens/shared/EditProfileScreen";
 import { colors } from "../theme/colors";
 
 const Tab = createBottomTabNavigator();
 const SearchStack = createNativeStackNavigator();
+const ProfileStack = createNativeStackNavigator();
 
 function PlaceholderScreen({ label }) {
   return (
@@ -33,6 +35,15 @@ function SearchStackNavigator() {
       <SearchStack.Screen name="RideRequest" component={RideRequestScreen} />
       <SearchStack.Screen name="RideTracking" component={RideTrackingScreen} />
     </SearchStack.Navigator>
+  );
+}
+
+function ProfileStackNavigator() {
+  return (
+    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} />
+      <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} />
+    </ProfileStack.Navigator>
   );
 }
 
@@ -73,7 +84,7 @@ export default function PassengerTabs() {
         name="Notifications"
         component={PassengerNotificationsScreen}
       />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Profile" component={ProfileStackNavigator} />
     </Tab.Navigator>
   );
 }

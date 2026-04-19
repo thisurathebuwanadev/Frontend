@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -17,6 +18,7 @@ import * as Location from "expo-location";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { colors } from "../../theme/colors";
 import { publishRoute } from "../../services/routeService";
+import { fetchVehicles } from "../../services/driverService";
 
 const DEFAULT_REGION = {
   latitude: 6.9271,
@@ -34,7 +36,9 @@ export default function CreateRouteScreen({ navigation }) {
   const [timeDate, setTimeDate] = useState(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [seats, setSeats] = useState("3");
-  const [vehicle, setVehicle] = useState("Toyota Prius • Blue");
+  const [vehicles, setVehicles] = useState([]);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [vehiclePickerVisible, setVehiclePickerVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mapVisible, setMapVisible] = useState(false);
   const [pickingField, setPickingField] = useState(null);
@@ -47,6 +51,9 @@ export default function CreateRouteScreen({ navigation }) {
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setStartCoords({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
     })();
+    fetchVehicles()
+      .then(setVehicles)
+      .catch(() => {});
   }, []);
 
   const openPicker = (field) => {
@@ -83,8 +90,8 @@ export default function CreateRouteScreen({ navigation }) {
   const handlePublish = async () => {
     if (loading) return;
 
-    if (!startLocation.trim() || !destination.trim() || !departureTime.trim()) {
-      Alert.alert("Missing details", "Please fill in all route details.");
+    if (!startLocation.trim() || !destination.trim() || !departureTime.trim() || !selectedVehicle) {
+      Alert.alert("Missing details", "Please fill in all route details including vehicle.");
       return;
     }
 
@@ -99,6 +106,7 @@ export default function CreateRouteScreen({ navigation }) {
         endAddress: destination.trim(),
         departureTime: departureTime.trim(),
         availableSeats: parseInt(seats, 10) || 1,
+        vehicleId: selectedVehicle.vehicle_id,
       });
       Alert.alert("Route published", "Your commuting route is now live.", [
         {
@@ -184,13 +192,13 @@ export default function CreateRouteScreen({ navigation }) {
           />
 
           <Text style={styles.label}>Vehicle</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. Toyota Prius • Blue"
-            placeholderTextColor={colors.placeholderText}
-            value={vehicle}
-            onChangeText={setVehicle}
-          />
+          <TouchableOpacity style={styles.inputRow} onPress={() => setVehiclePickerVisible(true)}>
+            <Ionicons name="car-outline" size={18} color={colors.primary} style={styles.inputIcon} />
+            <Text style={[styles.inputText, !selectedVehicle && { color: colors.placeholderText }]}>
+              {selectedVehicle ? `${selectedVehicle.make} ${selectedVehicle.model} • ${selectedVehicle.license_plate}` : "Select a vehicle"}
+            </Text>
+            <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity
@@ -203,6 +211,32 @@ export default function CreateRouteScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Vehicle picker modal */}
+      <Modal visible={vehiclePickerVisible} transparent animationType="fade">
+        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setVehiclePickerVisible(false)}>
+          <View style={styles.pickerSheet}>
+            <Text style={styles.pickerTitle}>Select vehicle</Text>
+            {vehicles.length === 0 ? (
+              <Text style={styles.pickerEmpty}>No vehicles found. Add one first.</Text>
+            ) : (
+              <FlatList
+                data={vehicles}
+                keyExtractor={(item) => String(item.vehicle_id)}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[styles.pickerItem, selectedVehicle?.vehicle_id === item.vehicle_id && styles.pickerItemSelected]}
+                    onPress={() => { setSelectedVehicle(item); setVehiclePickerVisible(false); }}
+                  >
+                    <Text style={styles.pickerItemText}>{item.make} {item.model}</Text>
+                    <Text style={styles.pickerItemSub}>{item.vehicle_type.toUpperCase()} • {item.license_plate}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Full-screen map picker modal */}
       <Modal visible={mapVisible} animationType="slide">
@@ -323,7 +357,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-  /* Modal */
+  /* Vehicle picker */
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  pickerSheet: {
+    backgroundColor: colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 20, maxHeight: "50%",
+  },
+  pickerTitle: { fontSize: 16, fontWeight: "700", color: colors.textPrimary, marginBottom: 12 },
+  pickerEmpty: { fontSize: 14, color: colors.textSecondary, textAlign: "center", paddingVertical: 20 },
+  pickerItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.background },
+  pickerItemSelected: { backgroundColor: "#EFF6FF", borderRadius: 10, paddingHorizontal: 10 },
+  pickerItemText: { fontSize: 15, fontWeight: "600", color: colors.textPrimary },
+  pickerItemSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  /* Map modal */
   modalContainer: { flex: 1 },
   modalTopBar: {
     position: "absolute",

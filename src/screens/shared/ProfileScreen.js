@@ -36,10 +36,6 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     await logout();
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Auth" }],
-    });
   };
 
   return (

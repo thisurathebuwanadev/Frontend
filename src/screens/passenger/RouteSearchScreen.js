@@ -30,6 +30,7 @@ export default function RouteSearchScreen({ navigation }) {
   const [timeDate, setTimeDate] = useState(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [passengers, setPassengers] = useState("1");
+  const [selectedDays, setSelectedDays] = useState([]);
   const [mapVisible, setMapVisible] = useState(false);
   const [pickingField, setPickingField] = useState(null); // "start" | "destination"
   const [tempMarker, setTempMarker] = useState(null);
@@ -83,6 +84,7 @@ export default function RouteSearchScreen({ navigation }) {
         endLongitude: destCoords?.longitude ?? 0,
         departureTime: timeWindow,
         passengerCount: parseInt(passengers, 10) || 1,
+        days: selectedDays,
       });
       const results = (res.data || []).map((r) => ({
         id: String(r.routeId),
@@ -171,6 +173,27 @@ export default function RouteSearchScreen({ navigation }) {
             }}
           />
         )}
+
+        <View style={styles.daysRow}>
+          {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => {
+            const active = selectedDays.includes(day);
+            return (
+              <TouchableOpacity
+                key={day}
+                style={[styles.dayChip, active && styles.dayChipActive]}
+                onPress={() =>
+                  setSelectedDays((prev) =>
+                    active ? prev.filter((d) => d !== day) : [...prev, day]
+                  )
+                }
+              >
+                <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
+                  {day}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
         <View style={styles.inputRow}>
           <Ionicons name="people-outline" size={18} color={colors.secondary} style={styles.inputIcon} />
@@ -264,6 +287,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     fontSize: 14,
     color: colors.textPrimary,
+  },
+  daysRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 10,
+  },
+  dayChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    backgroundColor: colors.white,
+  },
+  dayChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  dayChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.textSecondary,
+  },
+  dayChipTextActive: {
+    color: colors.white,
   },
   searchButton: {
     marginTop: 8,

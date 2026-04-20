@@ -35,6 +35,7 @@ export default function CreateRouteScreen({ navigation }) {
   const [departureTime, setDepartureTime] = useState("");
   const [timeDate, setTimeDate] = useState(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [selectedDays, setSelectedDays] = useState([]);
   const [seats, setSeats] = useState("3");
   const [vehicles, setVehicles] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
@@ -90,8 +91,8 @@ export default function CreateRouteScreen({ navigation }) {
   const handlePublish = async () => {
     if (loading) return;
 
-    if (!startLocation.trim() || !destination.trim() || !departureTime.trim() || !selectedVehicle) {
-      Alert.alert("Missing details", "Please fill in all route details including vehicle.");
+    if (!startLocation.trim() || !destination.trim() || !departureTime.trim() || !selectedVehicle || selectedDays.length === 0) {
+      Alert.alert("Missing details", "Please fill in all route details including vehicle and days.");
       return;
     }
 
@@ -107,6 +108,7 @@ export default function CreateRouteScreen({ navigation }) {
         departureTime: departureTime.trim(),
         availableSeats: parseInt(seats, 10) || 1,
         vehicleId: selectedVehicle.vehicle_id,
+        days: selectedDays,
       });
       Alert.alert("Route published", "Your commuting route is now live.", [
         {
@@ -163,23 +165,44 @@ export default function CreateRouteScreen({ navigation }) {
               {departureTime || "Pick departure time"}
             </Text>
           </TouchableOpacity>
-
           {showTimePicker && (
-            <DateTimePicker
-              value={timeDate}
-              mode="time"
-              is24Hour
-              onChange={(_, selected) => {
-                setShowTimePicker(false);
-                if (selected) {
-                  setTimeDate(selected);
-                  const h = String(selected.getHours()).padStart(2, "0");
-                  const m = String(selected.getMinutes()).padStart(2, "0");
-                  setDepartureTime(`${h}:${m}:00`);
-                }
-              }}
-            />
+              <DateTimePicker
+                  value={timeDate}
+                  mode="time"
+                  is24Hour
+                  onChange={(_, selected) => {
+                    setShowTimePicker(false);
+                    if (selected) {
+                      setTimeDate(selected);
+                      const h = String(selected.getHours()).padStart(2, "0");
+                      const m = String(selected.getMinutes()).padStart(2, "0");
+                      setDepartureTime(`${h}:${m}:00`);
+                    }
+                  }}
+              />
           )}
+
+          <Text style={styles.label}>Repeat on</Text>
+          <View style={styles.daysRow}>
+            {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => {
+              const active = selectedDays.includes(day);
+              return (
+                <TouchableOpacity
+                  key={day}
+                  style={[styles.dayChip, active && styles.dayChipActive]}
+                  onPress={() =>
+                    setSelectedDays((prev) =>
+                      active ? prev.filter((d) => d !== day) : [...prev, day]
+                    )
+                  }
+                >
+                  <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
+                    {day}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
           <Text style={styles.label}>Available seats</Text>
           <TextInput
@@ -329,6 +352,31 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: colors.textPrimary,
+  },
+  daysRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  dayChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    backgroundColor: colors.white,
+  },
+  dayChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  dayChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.textSecondary,
+  },
+  dayChipTextActive: {
+    color: colors.white,
   },
   input: {
     backgroundColor: colors.white,

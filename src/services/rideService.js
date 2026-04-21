@@ -25,6 +25,11 @@ export async function createRideRequest({ routeId, pickupLatitude, pickupLongitu
   return api.post("/rides/request", { routeId, pickupLatitude, pickupLongitude, pickupAddress, passengerCount }).then((res) => res.data);
 }
 
+export async function fetchRideSummary() {
+  const res = await api.get("/rides/history/summary");
+  return res.data.data;
+}
+
 export async function rejectRideRequest(requestId) {
   // REAL API CALL (UNCOMMENT WHEN BACKEND IS READY)
   // return api.post(`/driver/ride-requests/${requestId}/reject`).then((res) => res.data);
